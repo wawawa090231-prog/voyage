@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>學習歷程航海圖</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+/* Layout: a sea chart read top to bottom — five islands on one dashed route, a boat marks where the student is. */
+:root{
+  --sea:#e6efec;        /* page ground, pale sea-foam */
+  --paper:#fbfaf6;      /* cards */
+  --ink:#1b2422;        /* text */
+  --muted:#5a6a66;
+  --line:#c9d6d2;
+  --tatala:#b3262a;     /* boat red, the one accent */
+  --tide:#1f6f6a;       /* sea teal, secondary */
+  --good:#2f7d4f;
+  --bad:#b3262a;
+  --gold:#c88a12;
+  --shade:rgba(20,40,36,.10);
+  --f-display:"LXGW WenKai TC","Kaiti TC","STKaiti","DFKai-SB",serif;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --sea:#0e1a1c;--paper:#162527;--ink:#e8efec;--muted:#9fb2ad;--line:#2b3f41;
+  --tatala:#e0575a;--tide:#5fbfb6;--good:#6cc690;--bad:#ef7a7c;--gold:#e7b24a;--shade:rgba(0,0,0,.35);color-scheme:dark}}
+:root[data-theme="dark"]{
+  --sea:#0e1a1c;--paper:#162527;--ink:#e8efec;--muted:#9fb2ad;--line:#2b3f41;
+  --tatala:#e0575a;--tide:#5fbfb6;--good:#6cc690;--bad:#ef7a7c;--gold:#e7b24a;--shade:rgba(0,0,0,.35);color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--sea);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.65;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;font-weight:700;line-height:1.3}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--tide);outline-offset:2px}
+
+/* tatala eye-triangle band */
+.band{height:14px;background:
+  linear-gradient(135deg,var(--tatala) 25%,transparent 25%) 0 0/14px 14px,
+  linear-gradient(225deg,var(--tatala) 25%,transparent 25%) 0 0/14px 14px;opacity:.85}
+
+header.top{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:end}
+.eyebrow{font-size:13px;letter-spacing:.12em;color:var(--tide);font-weight:700}
+header.top h1{font-size:clamp(34px,7vw,52px);letter-spacing:.02em}
+header.top p{margin:6px 0 0;color:var(--muted);max-width:34em}
+.boatmark{width:120px;height:auto}
+@media (max-width:560px){header.top{grid-template-columns:1fr}.boatmark{display:none}}
+
+.crew{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;justify-content:space-between}
+.crew label{font-size:14px;color:var(--muted);display:block}
+.crew input{font:inherit;font-size:18px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--sea);color:var(--ink);width:min(220px,100%)}
+.stats{display:flex;gap:22px;font-variant-numeric:tabular-nums}
+.stat b{display:block;font-family:var(--f-display);font-size:26px;line-height:1.1}
+.stat span{font-size:13px;color:var(--muted)}
+
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.tab{border:1px solid var(--line);background:transparent;border-radius:999px;padding:6px 16px;font-size:15px}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+/* route */
+.route{position:relative;display:flex;flex-direction:column;gap:22px;padding-left:34px}
+.route::before{content:"";position:absolute;left:12px;top:8px;bottom:8px;border-left:3px dashed var(--tide);opacity:.55}
+.island{position:relative;background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:18px 18px 16px}
+.island::before{content:"";position:absolute;left:-30px;top:22px;width:16px;height:16px;border-radius:50%;background:var(--paper);border:3px solid var(--tide)}
+.island.done::before{background:var(--tide)}
+.island.locked{opacity:.6}
+.ihead{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
+.ihead h2{font-size:24px}
+.ihead .where{font-size:13px;color:var(--muted);letter-spacing:.06em}
+.ihead .cnt{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.levels{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:12px}
+.lv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;text-align:left;background:var(--sea);border:1px solid var(--line);border-radius:12px;padding:10px 12px;transition:transform .15s}
+.lv:hover:not(:disabled){transform:translateY(-2px);border-color:var(--tide)}
+.lv:disabled{cursor:not-allowed}
+.lv .no{grid-row:span 2;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-size:18px;background:var(--paper);border:2px solid var(--line)}
+.lv.next .no{border-color:var(--tatala);color:var(--tatala)}
+.lv.cleared .no{background:var(--tide);border-color:var(--tide);color:var(--paper)}
+.lv .nm{font-weight:700;line-height:1.35}
+.lv .st{font-size:13px;color:var(--muted)}
+.stars{color:var(--gold);letter-spacing:2px}
+.stars .off{color:var(--line)}
+
+/* fish collection */
+.fishbox{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:18px}
+.fishgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px;margin-top:12px}
+.fish{border:1px dashed var(--line);border-radius:12px;padding:10px 6px;text-align:center;font-size:12px;color:var(--muted)}
+.fish svg{width:58px;height:30px;display:block;margin:0 auto 4px}
+.fish.got{border-style:solid;color:var(--ink)}
+.fish:not(.got) svg{opacity:.25;filter:grayscale(1)}
+
+/* checklist */
+.check{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:18px}
+.check ul{list-style:none;padding:0;margin:12px 0 0;display:flex;flex-direction:column;gap:6px}
+.check li label{display:flex;gap:12px;align-items:flex-start;padding:8px 10px;border-radius:10px;cursor:pointer}
+.check li label:hover{background:var(--sea)}
+.check input{width:20px;height:20px;margin-top:3px;accent-color:var(--tide);flex:none}
+.check .prog{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+.foot{font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px 16px;justify-content:space-between}
+.linkbtn{background:none;border:none;padding:0;color:var(--muted);text-decoration:underline}
+
+/* dialog */
+.overlay{position:fixed;inset:0;background:rgba(10,20,18,.55);display:grid;place-items:center;z-index:50;
+  padding:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
+.dlg{background:var(--paper);color:var(--ink);border-radius:18px;width:min(640px,100%);max-height:100%;overflow:auto;box-shadow:0 20px 60px var(--shade)}
+.dlg .bar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--paper);z-index:1}
+.dlg .bar b{font-family:var(--f-display);font-size:18px}
+.x{border:none;background:none;font-size:22px;line-height:1;padding:4px 8px;color:var(--muted)}
+.dlg .body{padding:18px;display:flex;flex-direction:column;gap:14px}
+.pips{display:flex;gap:6px}
+.pip{width:22px;height:6px;border-radius:3px;background:var(--line)}
+.pip.ok{background:var(--good)}.pip.ng{background:var(--bad)}.pip.cur{background:var(--tide)}
+.note{background:var(--sea);border-radius:12px;padding:14px 16px}
+.note h3{font-size:20px;margin-bottom:6px}
+.note ul{margin:6px 0 0;padding-left:1.2em}
+.q{font-size:18px;font-weight:700;line-height:1.5}
+.quote{border-left:4px solid var(--line);padding:6px 12px;background:var(--sea);border-radius:0 8px 8px 0;font-size:15px}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{text-align:left;border:1.5px solid var(--line);background:var(--paper);border-radius:10px;padding:10px 14px;line-height:1.5}
+.opt:hover:not(:disabled){border-color:var(--tide)}
+.opt.ok{border-color:var(--good);background:color-mix(in srgb,var(--good) 12%,var(--paper))}
+.opt.ng{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,var(--paper))}
+.opt.pick{border-color:var(--tide);background:color-mix(in srgb,var(--tide) 10%,var(--paper))}
+.opt .tag{display:inline-block;min-width:1.6em;font-family:var(--f-display);color:var(--tatala);font-weight:700}
+.seq{display:flex;flex-wrap:wrap;gap:6px;min-height:42px;padding:8px;border:1.5px dashed var(--line);border-radius:10px}
+.chip{background:var(--tide);color:var(--paper);border-radius:999px;padding:3px 12px;font-size:15px}
+.sortrow{display:grid;grid-template-columns:1fr;gap:6px;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px}
+.sortrow.ok{border-color:var(--good)}.sortrow.ng{border-color:var(--bad)}
+.bins{display:flex;flex-wrap:wrap;gap:6px}
+.bin{border:1.5px solid var(--line);background:var(--sea);border-radius:999px;padding:3px 12px;font-size:14px}
+.bin[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.fb{border-radius:10px;padding:10px 14px;font-size:15px}
+.fb.ok{background:color-mix(in srgb,var(--good) 14%,var(--paper))}
+.fb.ng{background:color-mix(in srgb,var(--bad) 12%,var(--paper))}
+.fb b{display:block}
+.acts{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.btn{border:none;border-radius:10px;padding:10px 20px;font-weight:700;background:var(--tatala);color:#fff}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.result{text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 0}
+.result .big{font-family:var(--f-display);font-size:30px}
+.result .stars{font-size:34px}
+.result svg{width:150px;height:76px}
+@media (prefers-reduced-motion:no-preference){
+  .result svg{animation:swim 1.6s ease-in-out infinite alternate}
+  @keyframes swim{from{transform:translateX(-10px) rotate(-3deg)}to{transform:translateX(10px) rotate(3deg)}}
+}
+[hidden]{display:none!important}
+body{margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="band" aria-hidden="true"></div>
+  <header class="top">
+    <div>
+      <div class="eyebrow">蘭嶼高中・學習歷程</div>
+      <h1>學習歷程航海圖</h1>
+      <p>划著拼板舟繞過五座島，每座島是一段撰寫技巧。答對題目就能收集飛魚，全部通過後，用最後的檢核表檢查你的作品。</p>
+    </div>
+    <svg class="boatmark" viewBox="0 0 120 70" aria-hidden="true">
+      <path d="M8 34 Q14 56 60 58 Q106 56 112 34 Q60 44 8 34Z" fill="var(--paper)" stroke="var(--ink)" stroke-width="2.5"/>
+      <path d="M8 34 L2 10 L14 30Z M112 34 L118 10 L106 30Z" fill="var(--paper)" stroke="var(--ink)" stroke-width="2.5" stroke-linejoin="round"/>
+      <path d="M20 44 L30 38 L40 44 L50 38 L60 44 L70 38 L80 44 L90 38 L100 44" fill="none" stroke="var(--tatala)" stroke-width="3"/>
+      <circle cx="26" cy="49" r="5" fill="none" stroke="var(--tatala)" stroke-width="2.5"/><circle cx="26" cy="49" r="1.8" fill="var(--ink)"/>
+      <circle cx="94" cy="49" r="5" fill="none" stroke="var(--tatala)" stroke-width="2.5"/><circle cx="94" cy="49" r="1.8" fill="var(--ink)"/>
+      <path d="M0 64 Q15 58 30 64 T60 64 T90 64 T120 64" fill="none" stroke="var(--tide)" stroke-width="2.5"/>
+    </svg>
+  </header>
+
+  <section class="crew" aria-label="航海員">
+    <div><label for="who">航海員名字</label><input id="who" maxlength="12" placeholder="輸入你的名字"></div>
+    <div class="stats">
+      <div class="stat"><b id="sLv">0/9</b><span>通過關卡</span></div>
+      <div class="stat"><b id="sStar">0/27</b><span>星星</span></div>
+      <div class="stat"><b id="sFish">0/9</b><span>飛魚</span></div>
+    </div>
+  </section>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="t-map" aria-selected="true">航海圖</button>
+    <button class="tab" role="tab" id="t-fish" aria-selected="false">飛魚收藏</button>
+    <button class="tab" role="tab" id="t-check" aria-selected="false">上傳前檢核表</button>
+  </div>
+
+
+  <section id="v-map" class="route" aria-label="航海圖"></section>
+
+  <section id="v-fish" class="fishbox" hidden>
+    <h2>飛魚收藏</h2>
+    <p style="margin:4px 0 0;color:var(--muted)">每通過一關，就有一條飛魚游進你的船。</p>
+    <div class="fishgrid" id="fishgrid"></div>
+  </section>
+
+  <section id="v-check" class="check" hidden>
+    <div class="ihead"><h2>上傳前自我檢核</h2><span class="prog" id="ckProg"></span></div>
+    <p style="margin:4px 0 0;color:var(--muted)">每一件作品上傳前，都先對照這張表。勾選只存在你這台裝置上。</p>
+    <ul id="cklist"></ul>
+    <div class="acts" style="margin-top:12px"><button class="btn ghost" id="ckReset">換下一件作品，清除勾選</button></div>
+  </section>
+
+  <div class="foot">
+    <span>內容整理自《學習歷程撰寫技巧講義》（2026.11.5）。改寫範例為講義自擬的示範。</span>
+    <button class="linkbtn" id="resetAll">重新開始航行</button>
+  </div>
+</div>
+
+<div class="overlay" id="ov" hidden>
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dTitle">
+    <div class="bar"><b id="dTitle"></b><div class="pips" id="pips"></div><button class="x" id="dClose" aria-label="關閉">×</button></div>
+    <div class="body" id="dBody"></div>
+  </div>
+</div>
+
+<script>
+const ISLANDS=[
+ {name:"啟航港",sub:"先記住三件事",levels:["L1"]},
+ {name:"課程成果灣",sub:"課程學習成果",levels:["L2","L3","L4"]},
+ {name:"主軸燈塔",sub:"多元表現綜整心得",levels:["L5","L6"]},
+ {name:"自述礁岩",sub:"自述與學習計畫",levels:["L7"]},
+ {name:"終點碼頭",sub:"各年級與上傳前檢核",levels:["L8","L9"]}
+];
+const BAD1="這次分組報告讓我學到很多，也培養了解決問題的能力，我覺得很有收穫。";
+const GOOD1="我負責問卷分析。第一版問卷的選項有重疊，回收後無法統計，所以我先找同學試填、改完再發放。我因此學到，問題要先測試才能收到可用的資料。";
+const BAD2="我個性樂觀開朗，高一參加學校社團，高二當過志工，還參加演講比賽，這些經驗都讓我成長很多。";
+const GOOD2="我最常做的事是觀察別人為什麼不說話。帶國小營隊時，我發現安靜的孩子常是聽不懂指令，所以改成分步驟示範，並把流程寫進活動企劃書。";
+const LV={
+ L1:{name:"教授想看什麼",fish:"白飛魚",
+  note:{h:"先記住這三件事",p:"大學教授審查時間有限，他們想從你的檔案看到你真的學到什麼、怎麼學到的。",li:["寫過程，不只寫結果：遇到什麼問題、怎麼解決。","寫具體例子，不寫空話：「我學到很多」無法讓教授認識你。","寫真實的自己：同組做同一份作品，每個人的心得也不該相同。"]},
+  qs:[
+   {t:"mc",q:"大學教授審查學習歷程時，最想看到什麼？",o:["你真的學到什麼、怎麼學到的","作品數量越多越好","排版是否華麗","得過多少獎"],a:0,why:"教授時間有限，要從檔案看出你的學習過程與收穫。"},
+   {t:"sort",q:"把每句話分類：這是「具體例子」還是「空話」？",bins:["具體例子","空話"],items:[["我學到很多，覺得很有收穫。",1],["第一版問卷選項重疊，我先找同學試填再修改。",0],["這次活動讓我成長很多。",1],["實驗溫度從 30 度改成 25 度後，數據才穩定。",0]],why:"有發生什麼、做了什麼、改了什麼，才是具體例子。"},
+   {t:"mc",q:"小安和小華同組做了同一份報告，心得應該怎麼寫？",o:["兩人交同一份心得就好","各自寫自己的經驗與收穫","由組長寫一份代表全組","只放報告，不寫心得"],a:1,why:"寫真實的自己：同一份作品，每個人的心得也不該相同。"}
+  ]},
+ L2:{name:"四步架構",fish:"黑翅飛魚",
+  note:{h:"課程學習成果的四步架構",p:"不要把筆記、學習單或報告直接上傳，要整理過再呈現。最前面先放 1～2 頁摘要。",li:["目標：這份作品想完成或搞懂什麼？","做法：你實際做了哪些事？","過程：碰到什麼困難，怎麼調整？","收穫：學到什麼，這個能力是怎麼學到的？"]},
+  qs:[
+   {t:"order",q:"依正確順序點選四步架構：",items:["目標","做法","過程","收穫"],why:"目標 → 做法 → 過程 → 收穫。"},
+   {t:"mc",q:"「碰到什麼困難，怎麼調整」屬於哪一步？",o:["目標","做法","過程","收穫"],a:2,why:"過程寫的是困難和你怎麼調整。"},
+   {t:"mc",q:"四步架構的最前面，要先放什麼？",o:["1～2 頁摘要","一張封面照片","老師的評語","完整的上課筆記"],a:0,why:"先放摘要，讓教授一眼看到重點。"},
+   {t:"mc",q:"上課寫的學習單，可以直接上傳當課程學習成果嗎？",o:["可以，原汁原味最真實","不行，要整理過再呈現","可以，但要掃描清楚","只要老師有打分數就可以"],a:1,why:"筆記、學習單或報告都要整理過再呈現。"}
+  ]},
+ L3:{name:"寫的時候注意",fish:"紅尾飛魚",
+  note:{h:"寫的時候注意",p:"",li:["挑重點：不必每個單元都放，選最有興趣的就好。","交代起點：說明你為什麼開始做這個題目。","小組作品：寫清楚你負責的部分和你學到的東西。","少抒情：多寫學到什麼，少寫「很開心、很感動」。"]},
+  qs:[
+   {t:"mc",q:"一學期上了 8 個單元，課程學習成果該怎麼放？",o:["8 個單元全部放進去","挑最有興趣的重點來寫","只放分數最高的單元","每個單元各寫一句"],a:1,why:"挑重點：不必每個單元都放。"},
+   {t:"sort",q:"這些內容應該「多寫」還是「少寫」？",bins:["多寫","少寫"],items:[["我從這次實驗學到的方法",0],["我覺得很開心、很感動",1],["我為什麼開始做這個題目",0],["大家都很認真、很棒",1]],why:"多寫學到什麼、交代起點；少寫抒情和空泛的稱讚。"},
+   {t:"mc",q:"小組作品最需要寫清楚什麼？",o:["全組成員的名單","你負責的部分和你學到的東西","組長是誰","全組花了多少時間"],a:1,why:"教授要認識的是你，所以寫清楚你的分工和收穫。"}
+  ]},
+ L4:{name:"課程成果改寫",fish:"燕鰭飛魚",
+  note:{h:"改寫範例",p:"以下兩段是講義自擬的示範，看看差在哪裡。",li:["不夠好："+BAD1,"較好："+GOOD1]},
+  qs:[
+   {t:"mc",q:"哪一段寫得比較好？",o:[BAD1,GOOD1],a:1,why:"第二段說出負責的部分、遇到的問題、怎麼解決、學到什麼。"},
+   {t:"mc",q:"「較好」的那段，好在哪裡？",o:["字數比較多","用了比較多形容詞","有負責的部分、遇到的問題、解法和收穫","有提到老師的指導"],a:2,why:"它把四步架構的「做法、過程、收穫」都寫出來了。"},
+   {t:"mc",q:"「培養了解決問題的能力」這句話的問題是？",o:["太短","沒有具體例子，看不出你怎麼解決","用詞太正式","不應該提到能力"],a:1,why:"寫具體例子，不寫空話。"}
+  ]},
+ L5:{name:"找到主軸",fish:"斑點飛魚",
+  note:{h:"多元表現綜整心得",p:"用一個主軸串起活動，不要一項一項寫成流水帳。常見上限是 800 字加 3 張圖，實際以校系規定為準。",li:["先找主軸：查目標科系需要什麼能力，選一項你最有經驗的。","活動當例子：只挑能支持主軸的經驗來寫。","重成長：列出投入最深的三件事，寫它們讓你改變了什麼。","讓教授想點開檔案：提到具體成果，例如你擬的活動企劃書。"]},
+  qs:[
+   {t:"mc",q:"寫多元表現綜整心得，最要避免的是？",o:["用一個主軸串起活動","一項一項寫成流水帳","提到具體成果","寫經驗讓你改變了什麼"],a:1,why:"要用主軸串起來，不要寫成流水帳。"},
+   {t:"order",q:"依順序點選寫綜整心得的步驟：",items:["查目標科系需要的能力","選一項你最有經驗的當主軸","挑能支持主軸的活動當例子","寫這些經驗讓你改變了什麼"],why:"先找主軸，再挑例子，最後寫成長。"},
+   {t:"mc",q:"綜整心得的字數與圖片上限是？",o:["一律 1500 字、不限張數","常見 800 字加 3 張圖，以校系規定為準","300 字以內，不能放圖","沒有任何限制"],a:1,why:"常見上限是 800 字加 3 張圖，但要看校系規定。"},
+   {t:"mc",q:"怎麼讓教授想點開你的檔案？",o:["多用形容詞","提到具體成果，例如你擬的活動企劃書","把所有活動都列出來","寫「詳見附件」"],a:1,why:"具體成果會讓教授想看更多。"}
+  ]},
+ L6:{name:"多元表現改寫",fish:"藍背飛魚",
+  note:{h:"改寫範例",p:"以下兩段是講義自擬的示範。",li:["不夠好："+BAD2,"較好："+GOOD2]},
+  qs:[
+   {t:"mc",q:"哪一段寫得比較好？",o:[BAD2,GOOD2],a:1,why:"第二段有主軸，也有具體的經驗和成果。"},
+   {t:"mc",q:"「我個性樂觀開朗」為什麼不夠好？",o:["太籠統，應該改用貼近生活、讓人記得的說法","不應該寫個性","樂觀是缺點","句子太長"],a:0,why:"少用空泛形容詞。"},
+   {t:"mc",q:"「較好」的那段用什麼當主軸？",o:["參加很多社團","演講比賽的成績","觀察別人為什麼不說話","個性樂觀開朗"],a:2,why:"它用一個觀察習慣串起營隊經驗和企劃書。"}
+  ]},
+ L7:{name:"自述四面向",fish:"金鱗飛魚",
+  note:{h:"自述與學習計畫",p:"先查目標校系的準備指引，各系要求的面向、字數和格式差很多。指引可到招聯會查詢系統查詢。",li:["學習歷程反思：動機、困難與解法、轉折、學習後的改變","就讀動機：為什麼選這個科系，哪些經驗讓你這樣想","高中的準備：為了讀這個科系，你已經做了哪些事","未來計畫：大學怎麼學（可分年敘述）、畢業後的生涯規劃"]},
+  qs:[
+   {t:"sort",q:"這些內容各屬於哪個面向？",bins:["學習歷程反思","就讀動機","高中的準備","未來計畫"],items:[["遇到的困難與我的解法",0],["哪些經驗讓我想讀這個系",1],["為了這個系，我已經做了哪些事",2],["大學四年怎麼學、畢業後的規劃",3],["學習後我有什麼改變",0]],why:"反思寫過程與改變，動機寫為什麼，準備寫做過什麼，計畫寫未來。"},
+   {t:"mc",q:"開始寫自述前，第一件事是？",o:["先參考學長姐的範本","到招聯會查詢系統，查目標校系的準備指引","先把字數寫滿","先請 AI 寫一份初稿"],a:1,why:"各系要求的面向、字數和格式差很多，要先看指引。"},
+   {t:"mc",q:"有些校系要求說明是否使用生成式 AI，該怎麼做？",o:["一律寫沒有使用","不用理會這項規定","先看清楚規定；無論是否使用，內容都要真實反映自己的經驗","讓 AI 全部寫完就好"],a:2,why:"內容都要是你自己的真實經驗。"}
+  ]},
+ L8:{name:"各年級該做什麼",fish:"銀紋飛魚",
+  note:{h:"各年級該做什麼",p:"平常就要留紀錄，高三才有東西可以整理。",li:["高一・探索嘗試：參加社團、競賽或志工，養成隨手記錄的習慣","高二・聚焦深化：縮小興趣範圍，爭取研究或參訪機會，認真寫課程成果","高三・整合呈現：檢視主軸、寫自述，依第一志願調整作品順序"]},
+  qs:[
+   {t:"sort",q:"這些事最適合在幾年級做？",bins:["高一","高二","高三"],items:[["參加社團、競賽或志工",0],["養成隨手記錄的習慣",0],["縮小興趣範圍",1],["爭取研究或參訪機會",1],["寫自述",2],["依第一志願調整作品順序",2]],why:"高一探索、高二聚焦、高三整合。"},
+   {t:"mc",q:"高二的重點是？",o:["探索嘗試","聚焦深化","整合呈現","專心準備學測，先不管學習歷程"],a:1,why:"高二要縮小興趣範圍、深化。"},
+   {t:"mc",q:"為什麼平常就要留紀錄？",o:["老師規定的","高三才有東西可以整理","紀錄越多分數越高","可以拿去參加比賽"],a:1,why:"平常留紀錄，高三才有素材。"}
+  ]},
+ L9:{name:"上傳前檢核",fish:"彩虹飛魚",
+  note:{h:"上傳前自我檢核",p:"每一件作品上傳前，都先對照檢核表。通過這一關後，可以在「上傳前檢核表」分頁逐項勾選。",li:["最前面有摘要；有寫目標、做法、過程和收穫","每個能力都有具體例子；小組作品寫清楚自己負責的部分","沒有抄襲或請人代寫；作品和想申請的方向有關","照目標校系的字數與格式規定；請師長或同學校閱","在截止日前至少一週完成上傳"]},
+  qs:[
+   {t:"mc",q:"小明的作品寫了目標、做法和收穫，上傳前他該補什麼？",o:["更多照片","過程：碰到什麼困難，怎麼調整","得獎證明","老師的簽名"],a:1,why:"檢核表：有寫目標、做法、過程和收穫。"},
+   {t:"mc",q:"上傳截止日是 3 月 20 日，最晚應該在哪天前完成？",o:["3 月 20 日當天","3 月 19 日","3 月 13 日","截止後再補交"],a:2,why:"在截止日前至少一週完成上傳。"},
+   {t:"mc",q:"下列哪一項「不在」檢核表上？",o:["最前面有摘要","作品至少要 10 頁","作品和我想申請的方向有關","有請師長或同學幫忙校閱"],a:1,why:"檢核表看的是內容與規定，不是頁數。"},
+   {t:"mc",q:"同學幫你把心得整篇重寫得很漂亮，可以直接上傳嗎？",o:["可以，寫得好就好","不行，不能抄襲或請人代寫","可以，只要註明同學名字","只有自述不行，其他可以"],a:1,why:"檢核表：沒有抄襲或請人代寫。"}
+  ]}
+};
+const CHECK=["最前面有摘要，教授一眼看得出重點","有寫目標、做法、過程和收穫","每個能力都有具體例子","小組作品有寫清楚我負責的部分","沒有抄襲或請人代寫","作品和我想申請的方向有關","有照目標校系的字數與格式規定","有請師長或同學幫忙校閱","在截止日前至少一週完成上傳"];
+const ORDER=ISLANDS.flatMap(i=>i.levels);
+const FISHCOL=["#d9dde0","#2b3134","#c9453f","#5d8fb0","#8a7a4c","#2f5f8f","#d4a12a","#a7b4bb","#7b5ea7"];
+
+const KEY="lanyu-voyage-v1";
+let S={name:"",stars:{},check:[]};
+try{const r=localStorage.getItem(KEY);if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const starStr=n=>`<span class="stars" aria-label="${n} 顆星">${"★".repeat(n)}<span class="off">${"★".repeat(3-n)}</span></span>`;
+const fishSVG=c=>`<svg viewBox="0 0 60 30" aria-hidden="true"><path d="M6 15 Q20 4 40 12 L54 6 L50 15 L54 24 L40 18 Q20 26 6 15Z" fill="${c}" stroke="var(--ink)" stroke-width="1.4"/><path d="M22 13 L32 2 L36 12Z" fill="${c}" stroke="var(--ink)" stroke-width="1.2" opacity=".85"/><circle cx="12" cy="14" r="1.6" fill="var(--ink)"/></svg>`;
+function unlocked(id){const i=ORDER.indexOf(id);return i===0||S.stars[ORDER[i-1]]>0}
+
+function render(){
+  if(document.activeElement!==$("who"))$("who").value=S.name||"";
+  const cleared=ORDER.filter(k=>S.stars[k]>0).length;
+  const stars=ORDER.reduce((a,k)=>a+(S.stars[k]||0),0);
+  $("sLv").textContent=cleared+"/"+ORDER.length;
+  $("sStar").textContent=stars+"/"+ORDER.length*3;
+  $("sFish").textContent=cleared+"/"+ORDER.length;
+  const nextId=ORDER.find(k=>!(S.stars[k]>0));
+  $("v-map").innerHTML=ISLANDS.map((isl,ii)=>{
+    const done=isl.levels.every(k=>S.stars[k]>0);
+    const locked=!unlocked(isl.levels[0]);
+    const c=isl.levels.filter(k=>S.stars[k]>0).length;
+    return `<article class="island ${done?"done":""} ${locked?"locked":""}">
+      <div class="ihead"><div><div class="where">第 ${ii+1} 座島・${esc(isl.sub)}</div><h2>${esc(isl.name)}</h2></div><span class="cnt">${c}/${isl.levels.length} 關</span></div>
+      <div class="levels">${isl.levels.map(k=>{
+        const L=LV[k],n=ORDER.indexOf(k)+1,st=S.stars[k]||0,ok=unlocked(k);
+        const cls=st>0?"cleared":(k===nextId?"next":"");
+        return `<button class="lv ${cls}" data-lv="${k}" ${ok?"":"disabled"}>
+          <span class="no">${n}</span><span class="nm">${esc(L.name)}</span>
+          <span class="st">${st>0?starStr(st):(ok?(k===nextId?"下一站":"可前往"):"🔒 尚未開放")}</span></button>`}).join("")}</div>
+    </article>`}).join("");
+  $("fishgrid").innerHTML=ORDER.map((k,i)=>{const got=S.stars[k]>0;return `<div class="fish ${got?"got":""}">${fishSVG(FISHCOL[i])}${got?esc(LV[k].fish):"第 "+(i+1)+" 關"}</div>`}).join("");
+  $("cklist").innerHTML=CHECK.map((t,i)=>`<li><label><input type="checkbox" id="ck${i}" data-ck="${i}" ${S.check[i]?"checked":""}><span>${esc(t)}</span></label></li>`).join("");
+  $("ckProg").textContent=CHECK.filter((_,i)=>S.check[i]).length+"/"+CHECK.length+" 項";
+}
+
+/* tabs */
+const TABS=[["t-map","v-map"],["t-fish","v-fish"],["t-check","v-check"]];
+TABS.forEach(([t,v])=>$(t).addEventListener("click",()=>{TABS.forEach(([t2,v2])=>{$(t2).setAttribute("aria-selected",t2===t);$(v2).hidden=v2!==v})}));
+
+$("who").addEventListener("input",e=>{S.name=e.target.value.trim();save()});
+
+$("v-map").addEventListener("click",e=>{const b=e.target.closest("[data-lv]");if(b&&!b.disabled)openLevel(b.dataset.lv)});
+$("cklist").addEventListener("change",e=>{const i=e.target.dataset.ck;if(i!=null){S.check[i]=e.target.checked;save();render()}});
+$("ckReset").addEventListener("click",()=>{S.check=[];save();render()});
+
+let armed=false;
+$("resetAll").addEventListener("click",e=>{
+  if(!armed){armed=true;e.target.textContent="再按一次確認清除所有進度";setTimeout(()=>{armed=false;e.target.textContent="重新開始航行"},4000);return}
+  armed=false;S={name:S.name,stars:{},check:[]};save();render();e.target.textContent="已清除進度";
+});
+
+/* level runner */
+let R=null;
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+function openLevel(id){
+  R={id,L:LV[id],i:-1,res:[]};
+  $("dTitle").textContent="第 "+(ORDER.indexOf(id)+1)+" 關・"+R.L.name;
+  $("ov").hidden=false;showNote();$("dClose").focus();
+}
+function closeDlg(){$("ov").hidden=true;R=null;render()}
+$("dClose").addEventListener("click",closeDlg);
+$("ov").addEventListener("click",e=>{if(e.target.id==="ov")closeDlg()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ov").hidden)closeDlg()});
+
+function pips(){$("pips").innerHTML=R.L.qs.map((_,i)=>`<span class="pip ${R.res[i]===true?"ok":R.res[i]===false?"ng":i===R.i?"cur":""}"></span>`).join("")}
+function showNote(){
+  pips();const n=R.L.note;
+  $("dBody").innerHTML=`<div class="note"><h3>航海筆記：${esc(n.h)}</h3>${n.p?`<p style="margin:0">${esc(n.p)}</p>`:""}<ul>${n.li.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>
+   <div class="acts"><button class="btn" id="go">讀完了，開始答題（${R.L.qs.length} 題）</button></div>`;
+  $("go").onclick=()=>{R.i=0;showQ()};
+}
+function showQ(){
+  pips();const q=R.L.qs[R.i],B=$("dBody");
+  let html=`<div class="q">${R.i+1}. ${esc(q.q)}</div>`;
+  if(q.t==="mc"){
+    q._o=shuffle(q.o.map((t,k)=>({t,k})));
+    html+=`<div class="opts">${q._o.map((o,j)=>`<button class="opt" data-j="${j}"><span class="tag">${"ABCD"[j]}</span>${esc(o.t)}</button>`).join("")}</div>`;
+  }else if(q.t==="order"){
+    q._o=shuffle(q.items.map((t,k)=>({t,k})));q._pick=[];
+    html+=`<div class="seq" id="seq" aria-live="polite"><span style="color:var(--muted);font-size:14px">依序點下面的選項</span></div>
+     <div class="opts">${q._o.map((o,j)=>`<button class="opt" data-j="${j}">${esc(o.t)}</button>`).join("")}</div>
+     <div class="acts"><button class="btn ghost" id="redo">重排</button><button class="btn" id="sub" disabled>確認</button></div>`;
+  }else{
+    q._o=shuffle(q.items.map(([t,b])=>({t,b})));q._pick=q._o.map(()=>null);
+    html+=`<div class="opts">${q._o.map((o,j)=>`<div class="sortrow" id="row${j}"><div>${esc(o.t)}</div><div class="bins">${q.bins.map((bn,b)=>`<button class="bin" data-r="${j}" data-b="${b}" aria-pressed="false">${esc(bn)}</button>`).join("")}</div></div>`).join("")}</div>
+     <div class="acts"><button class="btn" id="sub" disabled>確認</button></div>`;
+  }
+  html+=`<div id="fb"></div>`;
+  B.innerHTML=html;
+  if(q.t==="mc"){
+    B.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
+      const j=+b.dataset.j,ok=q._o[j].k===q.a;
+      B.querySelectorAll(".opt").forEach((x,jj)=>{x.disabled=true;if(q._o[jj].k===q.a)x.classList.add("ok")});
+      if(!ok)b.classList.add("ng");
+      answer(ok);
+    });
+  }else if(q.t==="order"){
+    const seq=$("seq"),sub=$("sub");
+    const draw=()=>{seq.innerHTML=q._pick.length?q._pick.map(j=>`<span class="chip">${esc(q._o[j].t)}</span>`).join(""):`<span style="color:var(--muted);font-size:14px">依序點下面的選項</span>`;
+      B.querySelectorAll(".opt").forEach(x=>{const j=+x.dataset.j;x.disabled=q._pick.includes(j);x.classList.toggle("pick",q._pick.includes(j))});sub.disabled=q._pick.length!==q.items.length};
+    B.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{q._pick.push(+b.dataset.j);draw()});
+    $("redo").onclick=()=>{q._pick=[];draw()};
+    sub.onclick=()=>{const ok=q._pick.every((j,p)=>q._o[j].k===p);
+      B.querySelectorAll(".opt,#redo").forEach(x=>x.disabled=true);sub.disabled=true;
+      if(!ok)seq.insertAdjacentHTML("afterend",`<div class="fb" style="background:var(--sea)"><b>正確順序</b>${q.items.map(esc).join(" → ")}</div>`);
+      answer(ok)};
+  }else{
+    const sub=$("sub");
+    B.querySelectorAll(".bin").forEach(b=>b.onclick=()=>{const r=+b.dataset.r;q._pick[r]=+b.dataset.b;
+      $("row"+r).querySelectorAll(".bin").forEach(x=>x.setAttribute("aria-pressed",+x.dataset.b===q._pick[r]));
+      sub.disabled=q._pick.some(v=>v===null)});
+    sub.onclick=()=>{let ok=true;
+      q._o.forEach((o,j)=>{const good=q._pick[j]===o.b;ok=ok&&good;const row=$("row"+j);row.classList.add(good?"ok":"ng");
+        if(!good)row.insertAdjacentHTML("beforeend",`<div style="font-size:14px;color:var(--muted)">應該是：${esc(q.bins[o.b])}</div>`)});
+      B.querySelectorAll(".bin").forEach(x=>x.disabled=true);sub.disabled=true;answer(ok)};
+  }
+}
+function answer(ok){
+  R.res[R.i]=ok;pips();const q=R.L.qs[R.i],last=R.i===R.L.qs.length-1;
+  $("fb").innerHTML=`<div class="fb ${ok?"ok":"ng"}"><b>${ok?"答對了！":"再想想"}</b>${esc(q.why)}</div>
+   <div class="acts" style="margin-top:12px"><button class="btn" id="nx">${last?"看結果":"下一題"}</button></div>`;
+  $("nx").onclick=()=>{if(last)finish();else{R.i++;showQ()}};$("nx").focus();
+}
+function finish(){
+  const wrong=R.res.filter(x=>!x).length,st=wrong===0?3:wrong<=1?2:1;
+  const prev=S.stars[R.id]||0;S.stars[R.id]=Math.max(prev,st);save();
+  const idx=ORDER.indexOf(R.id),next=ORDER[idx+1],who=S.name?esc(S.name)+"，":"";
+  R.i=-1;pips();
+  $("dBody").innerHTML=`<div class="result">${fishSVG(FISHCOL[idx])}
+    <div class="big">${who}你捕到了${esc(R.L.fish)}</div>${starStr(st)}
+    <div style="color:var(--muted)">答對 ${R.res.length-wrong} / ${R.res.length} 題${prev>st?"（保留你之前的 "+prev+" 顆星）":""}</div>
+    ${!next?`<div class="note" style="text-align:left;margin-top:8px">五座島都繞完了！打開「上傳前檢核表」，每一件作品上傳前都對照一次。</div>`:""}</div>
+   <div class="acts"><button class="btn ghost" id="again">再挑戰一次</button>${next?`<button class="btn" id="nxl">前往下一關</button>`:`<button class="btn" id="tock">打開檢核表</button>`}</div>`;
+  $("again").onclick=()=>openLevel(R.id);
+  if(next)$("nxl").onclick=()=>openLevel(next);
+  else $("tock").onclick=()=>{closeDlg();$("t-check").click()};
+}
+render();
+</script>
+</body>
+</html>
