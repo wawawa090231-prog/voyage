@@ -1,0 +1,11 @@
+[Unit]
+Description=USB Guard - 接上手機/充電線時檢查是否有資料外傳
+After=graphical-session.target
+
+[Service]
+ExecStart=/usr/bin/env python3 %h/.local/share/usb-guard/usb_guard.py watch
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
